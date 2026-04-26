@@ -15,6 +15,9 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
 
+    def __repr__(self):
+        return f"<User id={self.id} username={self.username!r}>"
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -27,16 +30,26 @@ class Item(db.Model):
     code = db.Column(db.String(50), unique=True)
     description = db.Column(db.Text)
     pvc_formula_code = db.Column(db.String(50), nullable=False)
-    weights_json = db.Column(db.Text, default="{}")
-    extra_fields_json = db.Column(db.Text, default="[]")
+    # Use native JSON columns — no manual json.loads/dumps needed
+    weights_json = db.Column(db.JSON, default=dict)
+    extra_fields_json = db.Column(db.JSON, default=list)
 
     @property
     def weights(self):
-        return json.loads(self.weights_json or "{}")
+        v = self.weights_json
+        if isinstance(v, str):
+            return json.loads(v or "{}")
+        return v or {}
 
     @property
     def extra_fields(self):
-        return json.loads(self.extra_fields_json or "[]")
+        v = self.extra_fields_json
+        if isinstance(v, str):
+            return json.loads(v or "[]")
+        return v or []
+
+    def __repr__(self):
+        return f"<Item id={self.id} name={self.name!r}>"
 
 
 class ItemIndex(db.Model):
@@ -44,7 +57,10 @@ class ItemIndex(db.Model):
     item_id = db.Column(db.Integer, db.ForeignKey("item.id"), nullable=False)
     item = db.relationship("Item")
     month = db.Column(db.Date, nullable=False)
-    indices_json = db.Column(db.Text, nullable=False)
+    indices_json = db.Column(db.JSON, nullable=False)
+
+    def __repr__(self):
+        return f"<ItemIndex item_id={self.item_id} month={self.month}>"
 
 
 class PVCResult(db.Model):
@@ -55,9 +71,12 @@ class PVCResult(db.Model):
     item = db.relationship("Item")
     username = db.Column(db.String(80))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     basicrate = db.Column(db.Float)
     quantity = db.Column(db.Float)
     freightrateperunit = db.Column(db.Float)
+    # Input lower rate (stored separately from the computed loweractual result)
+    inputlowerrate = db.Column(db.Float)
     pvcbasedate = db.Column(db.String(10))
     origdp = db.Column(db.String(10))
     refixeddp = db.Column(db.String(10))
@@ -69,8 +88,6 @@ class PVCResult(db.Model):
     pvccontractual = db.Column(db.Float)
     loweractual = db.Column(db.Float)
     lowercontractual = db.Column(db.Float)
-    ldamtactual = db.Column(db.Float)
-    ldamtcontractual = db.Column(db.Float)
     fairprice = db.Column(db.Float)
     selectedscenario = db.Column(db.String(10))
     pvcactuallessldnew = db.Column(db.Float)
@@ -81,15 +98,20 @@ class PVCResult(db.Model):
     ldweeksnew = db.Column(db.Integer)
     ldratepctnew = db.Column(db.Float)
     ldapplicable = db.Column(db.Boolean, default=False)
+    ldamtactual = db.Column(db.Float)
+    ldamtcontractual = db.Column(db.Float)
     pvcperseta2 = db.Column(db.Float)
     pvcpersetb2 = db.Column(db.Float)
     pvcpersetc1 = db.Column(db.Float)
     pvcpersetd1 = db.Column(db.Float)
     tenderno = db.Column(db.String(100))
     pono = db.Column(db.String(100))
-    scenarioamounts_json = db.Column(db.Text)
-    scenariodetails_json = db.Column(db.Text)
-    igbt_vendor_details_json = db.Column(db.Text)
+    scenarioamounts_json = db.Column(db.JSON)
+    scenariodetails_json = db.Column(db.JSON)
+    igbt_vendor_details_json = db.Column(db.JSON)
+
+    def __repr__(self):
+        return f"<PVCResult id={self.id} item_id={self.item_id} user_id={self.user_id}>"
 
 
 class TenderMaster(db.Model):
@@ -105,6 +127,9 @@ class TenderMaster(db.Model):
     lowerfreight = db.Column(db.Float)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    def __repr__(self):
+        return f"<TenderMaster id={self.id} tender_no={self.tender_no!r}>"
+
 
 class TenderVendor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -114,3 +139,6 @@ class TenderVendor(db.Model):
     vendor_name = db.Column(db.String(200), nullable=False)
     cif = db.Column(db.Float, default=0)
     currency = db.Column(db.String(10), nullable=False)
+
+    def __repr__(self):
+        return f"<TenderVendor id={self.id} vendor={self.vendor_name!r}>"

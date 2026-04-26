@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+*.spec
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Environment / secrets — NEVER commit real .env
+.env
+.env.*
+!.env.example
+
+# Flask / SQLite
+instance/
+pvc_dev.db
+*.db
+*.sqlite3
+
+# Migrations (keep versions/ but ignore auto-generated pyc)
+migrations/__pycache__/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

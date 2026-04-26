@@ -15,7 +15,8 @@ from flask import (
 from flask_login import login_required, current_user
 
 from . import db
-from .models import Item, ItemIndex, TenderMaster, TenderVendor  # [file:1]
+from .models import Item, ItemIndex, TenderMaster, TenderVendor
+from .utils import safe_float  # shared utility — no more duplication
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -31,7 +32,7 @@ def admin_required(fn):
             abort(403)
         return fn(*args, **kwargs)
 
-    return wrapper  # [file:1]
+    return wrapper
 
 
 # ---------- Items ----------
@@ -41,7 +42,7 @@ def admin_required(fn):
 @admin_required
 def items_list():
     items = Item.query.order_by(Item.name.asc()).all()
-    return render_template("admin_items_list.html", items=items)  # [file:6]
+    return render_template("admin_items_list.html", items=items)
 
 
 @admin_bp.route("/items/new", methods=["GET", "POST"])
@@ -71,8 +72,8 @@ def items_new():
             name=name,
             code=code or None,
             pvc_formula_code=formula,
-            weights_json=weightsjson or "{}",
-            extra_fields_json=extrafieldsjson or "[]",
+            weights_json=json.loads(weightsjson or "{}"),
+            extra_fields_json=json.loads(extrafieldsjson or "[]"),
             description=description,
         )
         db.session.add(it)
@@ -80,7 +81,7 @@ def items_new():
         flash("Item added successfully.", "success")
         return redirect(url_for("admin.items_list"))
 
-    return render_template("admin_items_form.html", item=None)  # [file:4]
+    return render_template("admin_items_form.html", item=None)
 
 
 @admin_bp.route("/items/<int:itemid>/edit", methods=["GET", "POST"])
@@ -101,8 +102,8 @@ def items_edit(itemid):
             return redirect(url_for("admin.items_edit", itemid=it.id))
 
         try:
-            json.loads(weightsjson or "{}")
-            json.loads(extrafieldsjson or "[]")
+            wj = json.loads(weightsjson or "{}")
+            ej = json.loads(extrafieldsjson or "[]")
         except Exception:
             flash("Weights / extra fields must be valid JSON.", "danger")
             return redirect(url_for("admin.items_edit", itemid=it.id))
@@ -110,14 +111,14 @@ def items_edit(itemid):
         it.name = name
         it.code = code or None
         it.pvc_formula_code = formula
-        it.weights_json = weightsjson or "{}"
-        it.extra_fields_json = extrafieldsjson or "[]"
+        it.weights_json = wj
+        it.extra_fields_json = ej
         it.description = description
         db.session.commit()
         flash("Item updated successfully.", "success")
         return redirect(url_for("admin.items_list"))
 
-    return render_template("admin_items_form.html", item=it)  # [file:4]
+    return render_template("admin_items_form.html", item=it)
 
 
 # ---------- Item indices ----------
@@ -133,7 +134,7 @@ def item_indices_list(itemid):
         .order_by(ItemIndex.month.desc())
         .all()
     )
-    return render_template("admin_item_indices_list.html", item=item, rows=rows)  # [file:3]
+    return render_template("admin_item_indices_list.html", item=item, rows=rows)
 
 
 @admin_bp.route("/items/<int:itemid>/indices/new", methods=["GET", "POST"])
@@ -152,9 +153,9 @@ def item_indices_new(itemid):
 
         indicesjson = (request.form.get("indicesjson") or "").strip()
         try:
-            json.loads(indicesjson or "{}")
+            indices_data = json.loads(indicesjson or "{}")
         except Exception:
-            flash("Indices must be valid JSON, e.g. {\"C\":100,\"AL\":200}.", "danger")
+            flash('Indices must be valid JSON, e.g. {"C":100,"AL":200}.', "danger")
             return redirect(url_for("admin.item_indices_new", itemid=item.id))
 
         existing = ItemIndex.query.filter_by(item_id=item.id, month=m).first()
@@ -162,13 +163,13 @@ def item_indices_new(itemid):
             flash(f"Indices for {m.strftime('%B %Y')} already exist. Edit instead.", "warning")
             return redirect(url_for("admin.item_indices_list", itemid=item.id))
 
-        row = ItemIndex(item_id=item.id, month=m, indices_json=indicesjson or "{}")
+        row = ItemIndex(item_id=item.id, month=m, indices_json=indices_data)
         db.session.add(row)
         db.session.commit()
         flash(f"Indices for {m.strftime('%B %Y')} added.", "success")
         return redirect(url_for("admin.item_indices_list", itemid=item.id))
 
-    return render_template("admin_item_indices_form.html", item=item, row=None)  # [file:2]
+    return render_template("admin_item_indices_form.html", item=item, row=None)
 
 
 @admin_bp.route("/items/<int:itemid>/indices/<int:rowid>/edit", methods=["GET", "POST"])
@@ -188,34 +189,27 @@ def item_indices_edit(itemid, rowid):
 
         indicesjson = (request.form.get("indicesjson") or "").strip()
         try:
-            json.loads(indicesjson or "{}")
+            indices_data = json.loads(indicesjson or "{}")
         except Exception:
-            flash("Indices must be valid JSON, e.g. {\"C\":100,\"AL\":200}.", "danger")
+            flash('Indices must be valid JSON, e.g. {"C":100,"AL":200}.', "danger")
             return redirect(url_for("admin.item_indices_edit", itemid=item.id, rowid=row.id))
 
-        row.indices_json = indicesjson or "{}"
+        row.indices_json = indices_data
         db.session.commit()
         flash("Indices updated.", "success")
         return redirect(url_for("admin.item_indices_list", itemid=item.id))
 
-    return render_template("admin_item_indices_form.html", item=item, row=row)  # [file:2]
+    return render_template("admin_item_indices_form.html", item=item, row=row)
 
 
 # ---------- Tenders + vendors ----------
-
-def _safe_float(x):
-    try:
-        return float(str(x or 0).replace(",", "").strip())
-    except Exception:
-        return 0.0  # [file:1]
-
 
 @admin_bp.route("/tenders")
 @login_required
 @admin_required
 def tenders_list():
     tenders = TenderMaster.query.order_by(TenderMaster.created_at.desc()).all()
-    return render_template("admin_tenders_list.html", tenders=tenders)  # [file:9]
+    return render_template("admin_tenders_list.html", tenders=tenders)
 
 
 @admin_bp.route("/tenders/new", methods=["GET", "POST"])
@@ -238,19 +232,19 @@ def tenders_new():
         row = TenderMaster(
             item_id=int(itemid),
             tender_no=tenderno,
-            basicrate=_safe_float(request.form.get("basicrate")),
+            basicrate=safe_float(request.form.get("basicrate")),
             pvcbasedate=request.form.get("pvcbasedate") or "",
-            lowerrate=_safe_float(request.form.get("lowerrate")),
+            lowerrate=safe_float(request.form.get("lowerrate")),
             lowerratebasedate=request.form.get("lowerratebasedate") or "",
-            freightrateperunit=_safe_float(request.form.get("freightrateperunit")),
-            lowerfreight=_safe_float(request.form.get("lowerfreight")),
+            freightrateperunit=safe_float(request.form.get("freightrateperunit")),
+            lowerfreight=safe_float(request.form.get("lowerfreight")),
         )
         db.session.add(row)
         db.session.commit()
         flash("Tender added successfully.", "success")
         return redirect(url_for("admin.tenders_list"))
 
-    return render_template("admin_tenders_form.html", tender=None, items=items)  # [file:7]
+    return render_template("admin_tenders_form.html", tender=None, items=items)
 
 
 @admin_bp.route("/tenders/<int:tenderid>/edit", methods=["GET", "POST"])
@@ -268,17 +262,17 @@ def tenders_edit(tenderid):
 
         tender.item_id = int(itemid)
         tender.tender_no = tenderno
-        tender.basicrate = _safe_float(request.form.get("basicrate"))
+        tender.basicrate = safe_float(request.form.get("basicrate"))
         tender.pvcbasedate = request.form.get("pvcbasedate") or ""
-        tender.lowerrate = _safe_float(request.form.get("lowerrate"))
+        tender.lowerrate = safe_float(request.form.get("lowerrate"))
         tender.lowerratebasedate = request.form.get("lowerratebasedate") or ""
-        tender.freightrateperunit = _safe_float(request.form.get("freightrateperunit"))
-        tender.lowerfreight = _safe_float(request.form.get("lowerfreight"))
+        tender.freightrateperunit = safe_float(request.form.get("freightrateperunit"))
+        tender.lowerfreight = safe_float(request.form.get("lowerfreight"))
         db.session.commit()
         flash("Tender updated successfully.", "success")
         return redirect(url_for("admin.tenders_list"))
 
-    return render_template("admin_tenders_form.html", tender=tender, items=items)  # [file:7]
+    return render_template("admin_tenders_form.html", tender=tender, items=items)
 
 
 @admin_bp.route("/tenders/<int:tenderid>/vendors")
@@ -292,7 +286,7 @@ def tender_vendors_list(tenderid):
         .order_by(TenderVendor.id.asc())
         .all()
     )
-    return render_template("admin_tender_vendors_list.html", tender=tender, rows=rows)  # [file:8]
+    return render_template("admin_tender_vendors_list.html", tender=tender, rows=rows)
 
 
 @admin_bp.route("/tenders/<int:tenderid>/vendors/new", methods=["GET", "POST"])
@@ -303,7 +297,7 @@ def tender_vendors_new(tenderid):
     if request.method == "POST":
         vendor_name = (request.form.get("vendorname") or "").strip()
         po_no = (request.form.get("pono") or "").strip()
-        cif = _safe_float(request.form.get("cif"))
+        cif = safe_float(request.form.get("cif"))
         currency = (request.form.get("currency") or "").strip()
         if not vendor_name or not currency:
             flash("Vendor name and currency are required.", "danger")
@@ -321,9 +315,10 @@ def tender_vendors_new(tenderid):
         flash("Vendor added.", "success")
         return redirect(url_for("admin.tender_vendors_list", tenderid=tender.id))
 
-    return render_template("admin_tender_vendor_form.html", tender=tender, row=None)  # [file:5]
+    return render_template("admin_tender_vendor_form.html", tender=tender, row=None)
 
-# ── Delete Item ──────────────────────────────────────────────────────────────
+
+# ── Delete Item ───────────────────────────────────────────────────────────────
 @admin_bp.route('/items/<int:itemid>/delete', methods=['POST'])
 @login_required
 @admin_required
@@ -353,7 +348,6 @@ def item_indices_delete(itemid, rowid):
 @admin_required
 def tenders_delete(tenderid):
     tender = TenderMaster.query.get_or_404(tenderid)
-    # Also delete all associated vendors
     TenderVendor.query.filter_by(tender_id=tender.id).delete()
     db.session.delete(tender)
     db.session.commit()
@@ -371,6 +365,8 @@ def tender_vendors_delete(tenderid, rowid):
     db.session.commit()
     flash('Vendor deleted.', 'success')
     return redirect(url_for('admin.tender_vendors_list', tenderid=tenderid))
+
+
 @admin_bp.route("/tenders/<int:tenderid>/vendors/<int:rowid>/edit", methods=["GET", "POST"])
 @login_required
 @admin_required
@@ -380,7 +376,7 @@ def tender_vendors_edit(tenderid, rowid):
     if request.method == "POST":
         vendor_name = (request.form.get("vendorname") or "").strip()
         po_no = (request.form.get("pono") or "").strip()
-        cif = _safe_float(request.form.get("cif"))
+        cif = safe_float(request.form.get("cif"))
         currency = (request.form.get("currency") or "").strip()
         if not vendor_name or not currency:
             flash("Vendor name and currency are required.", "danger")
@@ -394,4 +390,4 @@ def tender_vendors_edit(tenderid, rowid):
         flash("Vendor updated.", "success")
         return redirect(url_for("admin.tender_vendors_list", tenderid=tender.id))
 
-    return render_template("admin_tender_vendor_form.html", tender=tender, row=row)  # [file:5]
+    return render_template("admin_tender_vendor_form.html", tender=tender, row=row)

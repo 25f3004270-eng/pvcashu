@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from . import db
@@ -29,6 +29,10 @@ def login():
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
+    # Controlled by ALLOW_REGISTRATION config flag (True in dev, False in prod)
+    if not current_app.config.get("ALLOW_REGISTRATION", False):
+        abort(403)  # Registration disabled in production
+
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
@@ -38,8 +42,16 @@ def register():
             flash("Username and password are required", "warning")
             return render_template("register.html")
 
+        if len(password) < 8:
+            flash("Password must be at least 8 characters", "warning")
+            return render_template("register.html")
+
         if User.query.filter_by(username=username).first():
             flash("Username already taken", "warning")
+            return render_template("register.html")
+
+        if email and User.query.filter_by(email=email).first():
+            flash("Email already registered", "warning")
             return render_template("register.html")
 
         user = User(

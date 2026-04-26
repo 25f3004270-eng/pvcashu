@@ -1,11 +1,13 @@
-from flask import Flask
+from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_migrate import Migrate
 from .config import config_by_name
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = "auth.login"
+migrate = Migrate()
 
 
 def create_app(config_name="dev"):
@@ -14,6 +16,7 @@ def create_app(config_name="dev"):
 
     db.init_app(app)
     login_manager.init_app(app)
+    migrate.init_app(app, db)
 
     from .models import User  # noqa: F401
 
@@ -29,10 +32,10 @@ def create_app(config_name="dev"):
 
     @app.errorhandler(404)
     def not_found(e):
-        return "Page not found", 404
+        return render_template("404.html"), 404
 
     @app.errorhandler(500)
     def server_error(e):
-        return "Internal server error", 500
+        return render_template("500.html"), 500
 
     return app
