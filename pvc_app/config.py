@@ -6,7 +6,7 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     # Fail loudly in production if SECRET_KEY is not set
-    _secret = os.environ.get("SECRET_KEY", "")
+    _secret = os.environ.get("SECRET_KEY", "change-me-in-prod")
     SECRET_KEY = _secret if _secret else "dev-only-insecure-key"
 
     SQLALCHEMY_DATABASE_URI = os.environ.get(
