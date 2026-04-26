@@ -1,0 +1,38 @@
+/* static/css/custom.css */
+
+/* Global tweaks */
+body {
+  background-color: #f5f5f5;
+}
+
+/* Cards */
+.card {
+  border-radius: 0.4rem;
+}
+
+/* Tables */
+.table-sm td,
+.table-sm th {
+  padding: 0.35rem 0.5rem;
+}
+
+/* History and admin tables */
+.table-hover tbody tr:hover {
+  background-color: #f1f3f5;
+}
+
+/* Navbar brand spacing */
+.navbar-brand {
+  font-weight: 600;
+}
+
+/* No-print helper */
+.no-print {
+  /* style only; hide in @media print rules in base.html or custom.css if you want */
+}
+
+/* Flash messages */
+.alert {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
