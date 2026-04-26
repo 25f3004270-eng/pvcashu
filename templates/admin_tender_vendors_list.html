@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Vendors – {{ tender.tender_no }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h3 class="mb-1">Vendors – {{ tender.tender_no }}</h3>
+    <p class="text-muted mb-0">Item: {{ tender.item.name if tender.item else '-' }}</p>
+  </div>
+  <div>
+    <a href="{{ url_for('admin.tenders_list') }}" class="btn btn-outline-secondary me-2">
+      Back to Tenders
+    </a>
+    <a href="{{ url_for('admin.tender_vendors_new', tenderid=tender.id) }}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> Add Vendor
+    </a>
+  </div>
+</div>
+
+{% if rows %}
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Vendor Name</th>
+            <th>PO No</th>
+            <th>CIF</th>
+            <th>Currency</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in rows %}
+          <tr>
+            <td>{{ v.id }}</td>
+            <td>{{ v.vendor_name }}</td>
+            <td>{{ v.po_no or '-' }}</td>
+            <td>{{ v.cif or 0 }}</td>
+            <td>{{ v.currency }}</td>
+            <td>
+            <a href="{{ url_for('admin.tender_vendors_edit', tenderid=tender.id, rowid=v.id) }}"
+               class="btn btn-sm btn-warning me-1">Edit</a>
+            <form method="post"
+                  action="{{ url_for('admin.tender_vendors_delete', tenderid=tender.id, rowid=v.id) }}"
+                  class="d-inline"
+                  onsubmit="return confirm('Delete vendor {{ v.vendor_name }}?')">
+              <button class="btn btn-sm btn-danger">Delete</button>
+            </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-info">No vendors configured for this tender.</div>
+{% endif %}
+{% endblock %}

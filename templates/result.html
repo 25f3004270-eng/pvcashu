@@ -1,0 +1,921 @@
+{% extends "base.html" %}
+
+{% block title %}PVC Result{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+  <!-- HEADER -->
+  <div class="alert alert-success">
+    <h4 class="mb-1">
+      <i class="bi bi-calculator-fill me-2"></i> PVC Calculation Result
+    </h4>
+    <p class="mb-0">
+      <strong>User:</strong> {{ current_user.username }}
+      &nbsp;&nbsp;
+      <strong>Item:</strong> {{ item }}
+      {% if itemobj and itemobj.code %} ({{ itemobj.code }}){% endif %}
+      &nbsp;&nbsp;
+      <strong>Calc ID:</strong> {{ calcid }}
+      {% if result.data.tenderno %}
+        &nbsp;&nbsp;<strong>Tender No:</strong> {{ result.data.tenderno }}
+      {% endif %}
+      {% if result.data.pono %}
+        &nbsp;&nbsp;<strong>PO No:</strong> {{ result.data.pono }}
+      {% endif %}
+    </p>
+    {% if itemobj and itemobj.description %}
+    <p class="mb-0 mt-1">
+      <small class="text-muted">{{ itemobj.description }}</small>
+    </p>
+    {% endif %}
+  </div>
+
+  <!-- TOP SUMMARY CARDS -->
+  <div class="row text-center mb-4">
+    <!-- Final Fair Price -->
+    <div class="col-md-3 mb-2">
+      <div class="card bg-success text-white h-100">
+        <div class="card-body">
+          <h4>₹{{ "%.2f"|format(result.data.fairprice|default(0)) }}</h4>
+          <small><strong>Final Payable Fair Price</strong></small>
+        </div>
+      </div>
+    </div>
+    <!-- Selected Scenario PVC -->
+    <div class="col-md-3 mb-2">
+      <div class="card bg-primary text-white h-100">
+        <div class="card-body">
+          {% set sc = result.data.selectedscenario %}
+          {% if sc == "A2" %}
+            <h5>₹{{ "%.2f"|format(result.data.pvcactual|default(0)) }}</h5>
+            <small>Actual PVC (A2)</small>
+          {% elif sc == "B2" %}
+            <h5>₹{{ "%.2f"|format(result.data.pvccontractual|default(0)) }}</h5>
+            <small>Contractual PVC (B2)</small>
+          {% elif sc == "C1" %}
+            <h5>₹{{ "%.2f"|format(result.data.loweractual|default(0)) }}</h5>
+            <small>Lower Actual PVC (C1)</small>
+          {% elif sc == "D1" %}
+            <h5>₹{{ "%.2f"|format(result.data.lowercontractual|default(0)) }}</h5>
+            <small>Lower Contractual PVC (D1)</small>
+          {% else %}
+            <h5>0.00</h5>
+            <small>PVC Amount</small>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <!-- LD Amount -->
+    <div class="col-md-3 mb-2">
+      <div class="card bg-danger text-white h-100">
+        <div class="card-body">
+          {% if result.data.ldapplicable %}
+            <h5>₹{{ "%.2f"|format(result.data.ldamtactual|default(0)) }}</h5>
+          {% else %}
+            <h5>0.00</h5>
+          {% endif %}
+          <small>LD Amount</small>
+        </div>
+      </div>
+    </div>
+    <!-- Selected Scenario -->
+    <div class="col-md-3 mb-2">
+      <div class="card bg-info text-white h-100">
+        <div class="card-body">
+          <h3>{{ result.data.selectedscenario|default("NA") }}</h3>
+          <small>Selected Scenario</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUTS & DATES -->
+  <div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+      <h6 class="mb-0">
+        <i class="bi bi-input-cursor-text me-1"></i> Inputs & Dates
+      </h6>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <!-- Commercial Inputs -->
+        <div class="col-md-6">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light">
+              <tr><th colspan="2" class="text-center">Commercial Details</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th>Basic Rate</th>
+                <td>₹{{ "%.2f"|format(data.basicrate|default(0)) }}</td>
+              </tr>
+              <tr>
+                <th>Quantity</th>
+                <td>{{ data.quantity|default(0)|int }}</td>
+              </tr>
+              <tr>
+                <th>Freight Unit</th>
+                <td>₹{{ "%.2f"|format(data.freightrateperunit|default(0)) }}</td>
+              </tr>
+              <tr>
+                <th>Rate Applied</th>
+                <td>{{ data.rateapplied|default("NA") }}</td>
+              </tr>
+              {% if result.data.tenderno %}
+              <tr>
+                <th>Tender No</th>
+                <td>{{ result.data.tenderno }}</td>
+              </tr>
+              {% endif %}
+              {% if result.data.pono %}
+              <tr>
+                <th>PO No</th>
+                <td>{{ result.data.pono }}</td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+        <!-- Date Inputs -->
+        <div class="col-md-6">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light">
+              <tr><th colspan="2" class="text-center">Date Details</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th>PVC Base Date</th>
+                <td>{{ data.pvcbasedate or "-" }}</td>
+              </tr>
+              <tr>
+                <th>Original DP</th>
+                <td>{{ data.origdp or "-" }}</td>
+              </tr>
+              <tr>
+                <th>Refixed DP</th>
+                <td>{{ data.refixeddp or "-" }}</td>
+              </tr>
+              <tr>
+                <th>Extended DP w/o LD</th>
+                <td>{{ data.extendeddp or "-" }}</td>
+              </tr>
+              <tr>
+                <th>Call Inspection Date</th>
+                <td>{{ data.caldate or "-" }}</td>
+              </tr>
+              <tr>
+                <th>Supply Date</th>
+                <td>{{ data.supdate or "-" }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOWER RATE DETAILS -->
+  {% set lowermodes = [
+    "lower rate applicable",
+    "lower rate and ld comparison",
+    "lower rate with ld in further extension"
+  ] %}
+  {% if data.rateapplied and data.rateapplied|lower in lowermodes %}
+  <div class="card mb-4">
+    <div class="card-header bg-warning">
+      <h6 class="mb-0">
+        <i class="bi bi-percent me-1"></i> Lower Rate Details
+      </h6>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <table class="table table-sm table-bordered">
+            <tbody>
+              <tr>
+                <th>Lower Basic Rate</th>
+                <td>₹{{ "%.2f"|format(data.lowerrate|default(0)) }}</td>
+              </tr>
+              <tr>
+                <th>Lower Freight Unit</th>
+                <td>₹{{ "%.2f"|format(data.lowerfreight|default(0)) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="col-md-6">
+          <table class="table table-sm table-bordered">
+            <tbody>
+              <tr>
+                <th>Lower Base Date</th>
+                <td>{{ data.lowerbasicdate or "-" }}</td>
+              </tr>
+              <tr>
+                <th>Applied Mode</th>
+                <td>{{ data.rateapplied }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- LD DETAILS -->
+  {% if result.data.ldapplicable %}
+  <div class="card mb-4">
+    <div class="card-header bg-danger text-white">
+      <h6 class="mb-0">
+        <i class="bi bi-clock-history me-1"></i> Liquidated Damages (LD) Details
+      </h6>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered text-center align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Delay Days</th>
+              <th>Delay Weeks (Ceiling)</th>
+              <th>LD Rate (%)</th>
+              <th>LD on Actual (₹)</th>
+              <th>LD on Contractual (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="fw-bold text-danger">{{ result.data.delaydays|default(0) }}</td>
+              <td>{{ result.data.ldweeks|default(0) }}</td>
+              <td>{{ "%.2f"|format(result.data.ldratepct|default(0)) }}</td>
+              <td class="text-danger fw-bold">₹{{ "%.2f"|format(result.data.ldamtactual|default(0)) }}</td>
+              <td class="text-danger fw-bold">₹{{ "%.2f"|format(result.data.ldamtcontractual|default(0)) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <small class="text-muted">
+        Weeks = ceil(delay days / 7); LD Rate = min(weeks × 0.5, 10).
+      </small>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- SCENARIO COMPARISON -->
+  {% if result.scenarioamounts %}
+  {% set ratemode = data.rateapplied|lower if data.rateapplied else "" %}
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h6 class="mb-0">
+        <i class="bi bi-table me-1"></i> Scenario-wise PVC Comparison
+      </h6>
+    </div>
+    <div class="card-body table-responsive">
+      <table class="table table-bordered table-sm text-center align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>Scenario</th>
+            <th>Description</th>
+            <th>Gross PVC (₹)</th>
+            <th>LD (₹)</th>
+            <th>Net PVC after LD (₹)</th>
+            <th>PVC per Set (₹)</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- A2 -->
+          <tr class="{% if result.data.selectedscenario == 'A2' %}table-success fw-bold{% endif %}">
+            <td><strong>A2</strong></td>
+            <td>
+              Actual PVC<br>
+              <small class="text-muted">Base Rate, Call Date</small>
+            </td>
+            <td>₹{{ "%.2f"|format(result.data.pvcactual|default(0)) }}</td>
+            <td class="text-danger">
+              {% if result.data.ldapplicable %}
+              ₹{{ "%.2f"|format(result.data.ldamtactual|default(0)) }}
+              {% else %}—{% endif %}
+            </td>
+            <td>₹{{ "%.2f"|format(result.data.pvcactuallessldnew|default(result.data.pvcactual|default(0))) }}</td>
+            <td>
+              {% if result.data.pvcperseta2 is not none %}
+              ₹{{ "%.2f"|format(result.data.pvcperseta2) }}
+              {% endif %}
+            </td>
+            <td>
+              {% if result.data.selectedscenario == 'A2' %}
+              <span class="badge bg-success">SELECTED</span>
+              {% else %}
+              <span class="badge bg-secondary"></span>
+              {% endif %}
+            </td>
+          </tr>
+
+          <!-- B2 -->
+          {% if ratemode != "supply before due date" %}
+          <tr class="{% if result.data.selectedscenario == 'B2' %}table-success fw-bold{% endif %}">
+            <td><strong>B2</strong></td>
+            <td>
+              Contractual PVC<br>
+              <small class="text-muted">Base Rate, Scheduled DP</small>
+            </td>
+            <td>₹{{ "%.2f"|format(result.data.pvccontractual|default(0)) }}</td>
+            <td class="text-danger">
+              {% if result.data.ldapplicable %}
+              ₹{{ "%.2f"|format(result.data.ldamtcontractual|default(0)) }}
+              {% else %}—{% endif %}
+            </td>
+            <td>₹{{ "%.2f"|format(result.data.pvccontractuallessldnew|default(result.data.pvccontractual|default(0))) }}</td>
+            <td>
+              {% if result.data.pvcpersetb2 is not none %}
+              ₹{{ "%.2f"|format(result.data.pvcpersetb2) }}
+              {% endif %}
+            </td>
+            <td>
+              {% if result.data.selectedscenario == 'B2' %}
+              <span class="badge bg-success">SELECTED</span>
+              {% else %}
+              <span class="badge bg-secondary"></span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endif %}
+
+          <!-- C1 -->
+          {% if "C1" in result.scenarioamounts %}
+          <tr class="{% if result.data.selectedscenario == 'C1' %}table-success fw-bold{% endif %}">
+            <td><strong>C1</strong></td>
+            <td>
+              Lower Rate Actual PVC<br>
+              <small class="text-muted">Lower Rate, Call Date</small>
+            </td>
+            <td>₹{{ "%.2f"|format(result.data.loweractual|default(0)) }}</td>
+            <td class="text-danger">
+              {% if result.data.ldapplicable and ratemode == "lower rate with ld in further extension" %}
+              ₹{{ "%.2f"|format(result.data.ldamtactual|default(0)) }}
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              {% if ratemode == "lower rate with ld in further extension" and result.data.ldapplicable %}
+              ₹{{ "%.2f"|format(result.data.loweractuallessld|default(result.data.loweractual|default(0))) }}
+              {% else %}
+              ₹{{ "%.2f"|format(result.data.loweractual|default(0)) }}
+              {% endif %}
+            </td>
+            <td>
+              {% if result.data.pvcpersetc1 is not none %}
+              ₹{{ "%.2f"|format(result.data.pvcpersetc1) }}
+              {% endif %}
+            </td>
+            <td>
+              {% if result.data.selectedscenario == 'C1' %}
+              <span class="badge bg-success">SELECTED</span>
+              {% else %}
+              <span class="badge bg-secondary"></span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endif %}
+
+          <!-- D1 -->
+          {% if "D1" in result.scenarioamounts %}
+          <tr class="{% if result.data.selectedscenario == 'D1' %}table-success fw-bold{% endif %}">
+            <td><strong>D1</strong></td>
+            <td>
+              Lower Rate Contractual PVC<br>
+              <small class="text-muted">Lower Rate, Scheduled DP</small>
+            </td>
+            <td>₹{{ "%.2f"|format(result.data.lowercontractual|default(0)) }}</td>
+            <td class="text-danger">
+              {% if result.data.ldapplicable and ratemode == "lower rate with ld in further extension" %}
+              ₹{{ "%.2f"|format(result.data.ldamtcontractual|default(0)) }}
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              {% if ratemode == "lower rate with ld in further extension" and result.data.ldapplicable %}
+              ₹{{ "%.2f"|format(result.data.lowercontractuallessld|default(result.data.lowercontractual|default(0))) }}
+              {% else %}
+              ₹{{ "%.2f"|format(result.data.lowercontractual|default(0)) }}
+              {% endif %}
+            </td>
+            <td>
+              {% if result.data.pvcpersetd1 is not none %}
+              ₹{{ "%.2f"|format(result.data.pvcpersetd1) }}
+              {% endif %}
+            </td>
+            <td>
+              {% if result.data.selectedscenario == 'D1' %}
+              <span class="badge bg-success">SELECTED</span>
+              {% else %}
+              <span class="badge bg-secondary"></span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endif %}
+
+          <!-- Final row -->
+          <tr class="table-dark fw-bold">
+            <td colspan="4" class="text-end">
+              Final Payable Amount (Fair Price)
+            </td>
+            <td class="text-success">
+              ₹{{ "%.2f"|format(result.data.fairprice|default(0)) }}
+            </td>
+            <td></td>
+            <td>
+              <span class="badge bg-success fs-6">
+                {{ result.data.selectedscenario|default("") }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <small class="text-muted">
+        A2: Base rate with actual indices (call date); B2: base rate with indices on scheduled DP;
+        C1: lower rate with actual indices; D1: lower rate with indices on scheduled DP.
+      </small>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- INDEX-WISE PVC DETAILS (IEEMA) -->
+  {% if result.scenariodetails %}
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white">
+      <h6 class="mb-0">
+        <i class="bi bi-bar-chart-line me-1"></i> Index-wise PVC Details
+      </h6>
+    </div>
+    <div class="card-body">
+      {% set ratemode = data.rateapplied|lower if data.rateapplied else "" %}
+      {% if ratemode == "supply before due date" %}
+        {% set showsc = ["A2"] %}
+      {% elif ratemode == "supply after due date" %}
+        {% set showsc = ["A2", "B2"] %}
+      {% else %}
+        {% set showsc = ["A2", "B2", "C1", "D1"] %}
+      {% endif %}
+
+      <!-- Scenario Tabs -->
+      <ul class="nav nav-tabs mb-3" id="idxTabs" role="tablist">
+        {% set tabn = namespace(i=0) %}
+        {% for detail in result.scenariodetails %}
+          {% if detail.scenario in showsc %}
+            {% set tabn.i = tabn.i + 1 %}
+            <button
+              class="nav-link {% if tabn.i == 1 %}active{% endif %} {% if result.data.selectedscenario == detail.scenario %}fw-bold{% endif %}"
+              id="idx-tab-{{ detail.scenario }}"
+              data-bs-toggle="tab"
+              data-bs-target="#idx-pane-{{ detail.scenario }}"
+              type="button"
+              role="tab"
+            >
+              Scenario {{ detail.scenario }}
+              {% if result.data.selectedscenario == detail.scenario %}
+              <span class="badge bg-success ms-1">Selected</span>
+              {% endif %}
+            </button>
+          {% endif %}
+        {% endfor %}
+      </ul>
+
+      <!-- Scenario Panes -->
+      <div class="tab-content" id="idxTabContent">
+        {% set panen = namespace(i=0) %}
+        {% for detail in result.scenariodetails %}
+          {% if detail.scenario in showsc %}
+            {% set panen.i = panen.i + 1 %}
+            <div
+              class="tab-pane fade {% if panen.i == 1 %}show active{% endif %}"
+              id="idx-pane-{{ detail.scenario }}"
+              role="tabpanel"
+            >
+              <!-- badges -->
+              <div class="mb-2">
+                <span class="badge bg-secondary me-1">Base Month {{ detail.basemonth }}</span>
+                <span class="badge bg-secondary me-1">Current Month {{ detail.currentmonth }}</span>
+                <span class="badge bg-primary me-1">Total PVC {{ "%.4f"|format(detail.pvcpercent|default(0)) }}%</span>
+                {% if detail.scenario == "A2" %}
+                  <span class="badge bg-info ms-1">Amount ₹{{ "%.2f"|format(result.data.pvcactual|default(0)) }}</span>
+                {% elif detail.scenario == "B2" %}
+                  <span class="badge bg-info ms-1">Amount ₹{{ "%.2f"|format(result.data.pvccontractual|default(0)) }}</span>
+                {% elif detail.scenario == "C1" %}
+                  <span class="badge bg-info ms-1">Amount ₹{{ "%.2f"|format(result.data.loweractual|default(0)) }}</span>
+                {% elif detail.scenario == "D1" %}
+                  <span class="badge bg-info ms-1">Amount ₹{{ "%.2f"|format(result.data.lowercontractual|default(0)) }}</span>
+                {% endif %}
+              </div>
+
+              <!-- index table -->
+              <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle">
+                  <thead class="table-success text-center">
+                    <tr>
+                      <th>Index</th>
+                      <th>Base Value</th>
+                      <th>Current Value</th>
+                      <th>Weight (%)</th>
+                      <th>Contribution (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for k in detail.keys() %}
+                      {% if k.endswith("_base") %}
+                        {% set idx_key = k[:-5] %}
+                        {% set b = detail[idx_key ~ "_base"] %}
+                        {% set c = detail[idx_key ~ "_current"] %}
+                        {% set w = detail[idx_key ~ "_weight"] %}
+                        {% set con = detail[idx_key ~ "_contributionpct"] %}
+                        <tr>
+                          <td class="fw-bold text-center">
+                            <span class="badge bg-dark">{{ idx_key.upper() }}</span>
+                          </td>
+                          <td class="text-end">
+                            {% if b is not none %}{{ "%.4f"|format(b) }}{% else %}—{% endif %}
+                          </td>
+                          <td class="text-end">
+                            {% if c is not none %}{{ "%.4f"|format(c) }}{% else %}—{% endif %}
+                          </td>
+                          <td class="text-center">
+                            {% if w is not none %}{{ w }}{% else %}—{% endif %}
+                          </td>
+                          <td class="text-end fw-bold">
+                            {% if con is not none %}
+                              {% if con > 0 %}<span class="text-success">{% elif con < 0 %}<span class="text-danger">{% else %}<span>{% endif %}
+                              {{ "%.4f"|format(con) }}
+                              </span>
+                            {% else %}
+                              —
+                            {% endif %}
+                          </td>
+                        </tr>
+                      {% endif %}
+                    {% endfor %}
+                    <!-- Total PVC row -->
+                    <tr class="table-warning fw-bold">
+                      <td colspan="4" class="text-end">Total PVC</td>
+                      <td class="text-end">{{ "%.4f"|format(detail.pvcpercent|default(0)) }}</td>
+                    </tr>
+                    <!-- PVC per set row -->
+                    <tr class="table-light">
+                      <td colspan="4" class="text-end fw-bold">PVC per Set</td>
+                      <td class="text-end fw-bold text-primary">
+                        {% if detail.scenario == "A2" and result.data.pvcperseta2 is not none %}
+                          ₹{{ "%.2f"|format(result.data.pvcperseta2) }}
+                        {% elif detail.scenario == "B2" and result.data.pvcpersetb2 is not none %}
+                          ₹{{ "%.2f"|format(result.data.pvcpersetb2) }}
+                        {% elif detail.scenario == "C1" and result.data.pvcpersetc1 is not none %}
+                          ₹{{ "%.2f"|format(result.data.pvcpersetc1) }}
+                        {% elif detail.scenario == "D1" and result.data.pvcpersetd1 is not none %}
+                          ₹{{ "%.2f"|format(result.data.pvcpersetd1) }}
+                        {% endif %}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- IGBT VENDOR-WISE PVC BREAKDOWN -->
+  {% if result.igbtvendordetails %}
+  <div class="card shadow mb-4 border-0">
+    <div class="card-header bg-dark text-white py-3">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0">
+          <i class="bi bi-diagram-3-fill me-2"></i> IGBT Propulsion Vendor-wise PVC Breakdown
+        </h5>
+        <span class="badge bg-success fs-6">
+          Selected {{ result.data.selectedscenario|default("") }}
+          &nbsp; Fair Price ₹{{ "%.2f"|format(result.data.fairprice|default(0)) }}
+        </span>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      {% set igbt_sc_order = ["A2", "B2", "C1", "D1"] %}
+      {% set igbt_avail_sc = result.igbtvendordetails | map(attribute="scenario") | unique | list %}
+
+      <!-- Scenario Tabs -->
+      <ul class="nav nav-tabs px-3 pt-3" id="igbtTabs" role="tablist">
+        {% set igbttab = namespace(first=true) %}
+        {% for sc in igbt_sc_order %}
+          {% if sc in igbt_avail_sc %}
+          <button
+            class="nav-link {% if igbttab.first %}active{% endif %} {% if result.data.selectedscenario == sc %}fw-bold{% endif %}"
+            id="igbt-tab-{{ sc }}"
+            data-bs-toggle="tab"
+            data-bs-target="#igbt-pane-{{ sc }}"
+            type="button"
+            role="tab"
+          >
+            Scenario {{ sc }}
+            {% if result.data.selectedscenario == sc %}
+            <span class="badge bg-success ms-1">Selected</span>
+            {% endif %}
+            <small class="d-block text-muted" style="font-size:10px;">
+              {% if sc == "A2" %}
+                Base Rate, Call Date
+              {% elif sc == "B2" %}
+                Base Rate, Sched. DP
+              {% elif sc == "C1" %}
+                Lower Rate, Call Date
+              {% elif sc == "D1" %}
+                Lower Rate, Sched. DP
+              {% endif %}
+            </small>
+          </button>
+          {% set igbttab.first = false %}
+          {% endif %}
+        {% endfor %}
+      </ul>
+
+      <!-- Scenario Panes -->
+      <div class="tab-content p-3" id="igbtTabContent">
+        {% set igbtpane = namespace(first=true) %}
+        {% for sc in igbt_sc_order %}
+          {% if sc in igbt_avail_sc %}
+          {% set scrows = result.igbtvendordetails | selectattr("scenario", "equalto", sc) | list %}
+          {% set ns = namespace(minpvc=None, minvendor=None) %}
+          {% for vrow in scrows %}
+            {% if ns.minpvc is none or vrow.totalpvc < ns.minpvc %}
+              {% set ns.minpvc = vrow.totalpvc %}
+              {% set ns.minvendor = vrow.vendor %}
+            {% endif %}
+          {% endfor %}
+
+          <div
+            class="tab-pane fade {% if igbtpane.first %}show active{% endif %}"
+            id="igbt-pane-{{ sc }}"
+            role="tabpanel"
+          >
+            {% set igbtpane.first = false %}
+
+            <!-- Vendor Summary Table -->
+            <h6 class="fw-bold mb-2 mt-1">
+              Vendor-wise PVC Summary (Scenario {{ sc }})
+              <small class="text-muted fw-normal ms-2">
+                Minimum PVC across vendors is payable.
+              </small>
+            </h6>
+            <div class="table-responsive mb-4">
+              <table class="table table-bordered table-sm table-hover align-middle text-nowrap">
+                <thead class="table-dark text-center">
+                  <tr>
+                    <th rowspan="2" class="align-middle">Vendor Name</th>
+                    <th rowspan="2" class="align-middle">PO No</th>
+                    <th rowspan="2" class="align-middle">Currency</th>
+                    <th rowspan="2" class="align-middle">Basic Rate</th>
+                    <th rowspan="2" class="align-middle">CIF</th>
+                    <th rowspan="2" class="align-middle">Base Duty</th>
+                    <th rowspan="2" class="align-middle">Indigenous</th>
+                    <th colspan="3" class="text-center border-start">PVC Components</th>
+                    <th rowspan="2" class="align-middle border-start">Base Month</th>
+                    <th rowspan="2" class="align-middle">Current Month</th>
+                  </tr>
+                  <tr>
+                    <th class="border-start">P1<br><small>Indigenous</small></th>
+                    <th>P2<br><small>Imported CIF</small></th>
+                    <th class="table-warning">Total PVC<br><small>P1 + P2</small></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for vrow in scrows %}
+                  <tr class="{% if vrow.vendor == ns.minvendor %}table-success{% endif %}">
+                    <td class="fw-bold">
+                      {{ vrow.vendor }}
+                      {% if vrow.vendor == ns.minvendor %}
+                      <span class="badge bg-success ms-1">Min PVC</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-center">{{ vrow.pono or "" }}</td>
+                    <td class="text-center">
+                      <span class="badge bg-secondary">{{ vrow.currency }}</span>
+                    </td>
+                    <td class="text-end">{{ "{:,.2f}".format(vrow.rate or 0) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(vrow.cif or 0) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(vrow.baseduty or 0) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(vrow.indigenous or 0) }}</td>
+
+                    <td class="text-end border-start fw-bold {% if (vrow.p1 or 0) < 0 %}text-danger{% elif (vrow.p1 or 0) > 0 %}text-success{% endif %}">
+                      {{ "{:,.2f}".format(vrow.p1 or 0) }}
+                    </td>
+                    <td class="text-end fw-bold {% if (vrow.p2 or 0) < 0 %}text-danger{% elif (vrow.p2 or 0) > 0 %}text-success{% endif %}">
+                      {{ "{:,.2f}".format(vrow.p2 or 0) }}
+                    </td>
+                    <td class="text-end table-warning fw-bold {% if (vrow.totalpvc or 0) < 0 %}text-danger{% elif (vrow.totalpvc or 0) > 0 %}text-success{% endif %}">
+                      {{ "{:,.2f}".format(vrow.totalpvc or 0) }}
+                    </td>
+
+                    <td class="text-center border-start">{{ vrow.basemonth }}</td>
+                    <td class="text-center">{{ vrow.currentmonth }}</td>
+                  </tr>
+                  {% endfor %}
+
+                  <!-- Min PVC Summary Row -->
+                  <tr class="table-dark fw-bold">
+                    <td colspan="9" class="text-end">
+                      Minimum PVC across all vendors (Scenario {{ sc }})
+                    </td>
+                    <td class="text-end table-warning {% if (ns.minpvc or 0) < 0 %}text-danger{% elif (ns.minpvc or 0) > 0 %}text-success{% endif %}">
+                      {{ "{:,.2f}".format(ns.minpvc or 0) }}
+                    </td>
+                    <td colspan="2"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Index Detail per Vendor -->
+            <h6 class="fw-bold mb-2">
+              Index-wise Detail – All Vendors (Scenario {{ sc }})
+            </h6>
+            {% set vendors_in_sc = scrows | map(attribute="vendor") | unique | list %}
+
+            <!-- Vendor Pills -->
+            <ul class="nav nav-pills mb-3" id="vpills-{{ sc }}" role="tablist">
+              {% for vname in vendors_in_sc %}
+              <button
+                class="nav-link {% if loop.first %}active{% endif %} {% if vname == ns.minvendor %}border border-success{% endif %}"
+                id="vpill-{{ sc }}-{{ loop.index }}"
+                data-bs-toggle="pill"
+                data-bs-target="#vpane-{{ sc }}-{{ loop.index }}"
+                type="button"
+                role="tab"
+              >
+                {{ vname }}
+                {% if vname == ns.minvendor %}
+                <span class="badge bg-success ms-1">Min</span>
+                {% endif %}
+              </button>
+              {% endfor %}
+            </ul>
+
+            <!-- Vendor Pill Panes -->
+            <div class="tab-content mb-3" id="vpillContent-{{ sc }}">
+              {% for vname in vendors_in_sc %}
+              {% set vidxrows = result.igbtindexdetails
+                | selectattr("scenario", "equalto", sc)
+                | selectattr("vendor", "equalto", vname)
+                | list %}
+              <div
+                class="tab-pane fade {% if loop.first %}show active{% endif %}"
+                id="vpane-{{ sc }}-{{ loop.index }}"
+                role="tabpanel"
+              >
+                {% if vidxrows %}
+                <div class="table-responsive">
+                  <table class="table table-bordered table-sm align-middle">
+                    <thead class="table-secondary text-center">
+                      <tr>
+                        <th>Parameter</th>
+                        <th>Description</th>
+                        <th>Base Month</th>
+                        <th>Base Value</th>
+                        <th>Current Month</th>
+                        <th>Current Value</th>
+                        <th>Ratio (Curr/Base)</th>
+                        <th>Movement</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for irow in vidxrows %}
+                      {% if irow.basevalue and irow.basevalue != 0 %}
+                        {% set ratio = irow.currentvalue / irow.basevalue %}
+                      {% else %}
+                        {% set ratio = None %}
+                      {% endif %}
+                      <tr>
+                        <td class="fw-bold text-center">
+                          <span class="badge bg-dark">{{ irow.parameter }}</span>
+                        </td>
+                        <td>{{ irow.label }}</td>
+                        <td class="text-center text-muted">{{ irow.basemonth }}</td>
+                        <td class="text-end fw-bold">{{ "{:,.4f}".format(irow.basevalue or 0) }}</td>
+                        <td class="text-center text-muted">{{ irow.currentmonth }}</td>
+                        <td class="text-end fw-bold">
+                          {% if ratio is not none %}
+                            {% if ratio > 1 %}<span class="text-danger">{% elif ratio < 1 %}<span class="text-success">{% else %}<span>{% endif %}
+                            {{ "{:,.4f}".format(irow.currentvalue or 0) }}</span>
+                          {% else %}
+                            {{ "{:,.4f}".format(irow.currentvalue or 0) }}
+                          {% endif %}
+                        </td>
+                        <td class="text-end fw-bold">
+                          {% if ratio is not none %}
+                            {% if ratio > 1 %}
+                              <span class="text-danger">{{ "{:.4f}".format(ratio) }}</span>
+                            {% elif ratio < 1 %}
+                              <span class="text-success">{{ "{:.4f}".format(ratio) }}</span>
+                            {% else %}
+                              {{ "{:.4f}".format(ratio) }}
+                            {% endif %}
+                          {% else %}
+                            —
+                          {% endif %}
+                        </td>
+                        <td class="text-center">
+                          {% if ratio is not none %}
+                            {% if ratio > 1 %}
+                              <span class="badge bg-danger">
+                                {{ "{:.2f}".format((ratio-1)*100) }}%
+                              </span>
+                            {% elif ratio < 1 %}
+                              <span class="badge bg-success">
+                                {{ "{:.2f}".format((ratio-1)*100) }}%
+                              </span>
+                            {% else %}
+                              <span class="badge bg-secondary">No Change</span>
+                            {% endif %}
+                          {% else %}
+                            <span class="badge bg-secondary"></span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+                {% else %}
+                <div class="alert alert-warning py-2">
+                  No index detail rows found for <strong>{{ vname }}</strong> (Scenario {{ sc }}).
+                </div>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+
+            <!-- P1/P2 formula reference -->
+            <div class="alert alert-light border mt-1 mb-0" style="font-size:12px;">
+              <strong>Formula Reference:</strong><br>
+              <strong>P1</strong> (Indigenous) = Iv × [100 + Fc + Σ(wᵢ × Iᵢ₁ / Iᵢ₀)] − Iv<br>
+              <strong>P2</strong> (Imported CIF) = CIF × [100 × ER₁ / ER₀ + 100 × (D₁ − D₀) / D₀] / 100<br>
+              <small class="text-muted">
+                Subscript 0 = Base month; 1 = Current month (previous month for most indices, 3‑month previous for ER); Iv = Basic Rate − CIF − Base Duty.
+              </small>
+            </div>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ACTION BUTTONS -->
+  <div class="text-center mb-4 no-print">
+    <a href="{{ url_for('main.index') }}" class="btn btn-secondary me-2">
+      <i class="bi bi-calculator me-1"></i> New Calculation
+    </a>
+    <a href="{{ url_for('main.history') }}" class="btn btn-outline-secondary me-2">
+      <i class="bi bi-clock-history me-1"></i> History
+    </a>
+    <button onclick="window.print()" class="btn btn-primary me-2">
+      <i class="bi bi-printer me-1"></i> Print / PDF
+    </button>
+    {% if calcid %}
+    <a href="{{ url_for('pvc.export_calc_excel', calcid=calcid) }}" class="btn btn-success">
+      <i class="bi bi-file-earmark-excel me-1"></i> Download Excel
+    </a>
+    {% endif %}
+  </div>
+
+  <!-- FOOTNOTE -->
+  <div class="mb-5" style="font-size:11px;">
+    <table width="100%">
+      <tr>
+        <td style="background-color:#fff3cd;border:1px solid #ffeeba;padding:6px;font-weight:bold;">
+          Note: This application should be used for cross-verification only. Final PVC as per applicable contract clause shall prevail.
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- PRINT STYLES -->
+<style>
+@media print {
+  .no-print { display: none !important; }
+  .card { break-inside: avoid; }
+  .nav-tabs, .nav-pills { display: none !important; }
+  .tab-pane { display: block !important; opacity: 1 !important; }
+  .tab-content .tab-pane { display: block !important; }
+  body { font-size: 11px; }
+  .badge { border: 1px solid #000; }
+  table { font-size: 10px; }
+  .container { max-width: 100% !important; }
+  h5, h6 { font-size: 12px; }
+  .card-header { background-color: #e0e0e0 !important; color: #000 !important; }
+  .table-dark th { background-color: #555 !important; color: #fff !important; }
+  .text-white { color: #000 !important; }
+  .bg-success, .bg-primary, .bg-danger, .bg-info, .bg-dark, .bg-warning {
+    background-color: #e0e0e0 !important; color: #000 !important;
+  }
+}
+</style>
+{% endblock %}

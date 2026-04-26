@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ item.name }} Indices{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h3 class="mb-1">Indices – {{ item.name }}</h3>
+    <p class="text-muted mb-0">Monthly index values used for PVC calculation</p>
+  </div>
+  <div>
+    <a href="{{ url_for('admin.items_list') }}" class="btn btn-outline-secondary me-2">Back to Items</a>
+    <a href="{{ url_for('admin.item_indices_new', itemid=item.id) }}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> Add Indices
+    </a>
+  </div>
+</div>
+
+{% if rows %}
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Month</th>
+            <th>Indices JSON</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>{{ r.month.strftime('%Y-%m') }}</td>
+            <td style="max-width: 350px; word-break: break-all;">
+              <small class="text-muted">{{ r.indices_json }}</small>
+            </td>
+            <td>
+              <a href="{{ url_for('admin.item_indices_edit', itemid=item.id, rowid=r.id) }}"
+                 class="btn btn-sm btn-warning me-1">Edit</a>
+              <form method="post"
+                    action="{{ url_for('admin.item_indices_delete', itemid=item.id, rowid=r.id) }}"
+                    class="d-inline"
+                    onsubmit="return confirm('Delete index row for {{ r.month.strftime('%Y-%m') }}?')">
+                <button class="btn btn-sm btn-danger">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-info">No indices defined yet for this item.</div>
+{% endif %}
+{% endblock %}

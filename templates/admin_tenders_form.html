@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Tender' if tender else 'Add Tender' }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-1">{{ 'Edit Tender' if tender else 'Add Tender' }}</h3>
+  <a href="{{ url_for('admin.tenders_list') }}" class="btn btn-outline-secondary">
+    Back to Tenders
+  </a>
+</div>
+
+<form method="post">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Item</label>
+        <select name="itemid" class="form-select" required>
+          <option value="">-- Select Item --</option>
+          {% for it in items %}
+          <option value="{{ it.id }}"
+                  {% if tender and tender.item_id == it.id %}selected{% endif %}>
+            {{ it.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Tender No</label>
+        <input type="text" name="tenderno" class="form-control" required
+               value="{{ tender.tender_no if tender else '' }}">
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Basic Rate</label>
+          <input type="number" step="0.01" name="basicrate" class="form-control"
+                 value="{{ tender.basicrate if tender else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">PVC Base Date</label>
+          <input type="date" name="pvcbasedate" class="form-control"
+                 value="{{ tender.pvcbasedate if tender else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Freight Unit</label>
+          <input type="number" step="0.01" name="freightrateperunit" class="form-control"
+                 value="{{ tender.freightrateperunit if tender else '' }}">
+        </div>
+      </div>
+
+      <div class="row g-3 mt-2">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Lower Rate</label>
+          <input type="number" step="0.01" name="lowerrate" class="form-control"
+                 value="{{ tender.lowerrate if tender else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Lower Base Date</label>
+          <input type="date" name="lowerratebasedate" class="form-control"
+                 value="{{ tender.lowerratebasedate if tender else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Lower Freight</label>
+          <input type="number" step="0.01" name="lowerfreight" class="form-control"
+                 value="{{ tender.lowerfreight if tender else '' }}">
+        </div>
+      </div>
+
+      <div class="text-end mt-3">
+        <button type="submit" class="btn btn-primary">
+          {{ 'Update' if tender else 'Create' }} Tender
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

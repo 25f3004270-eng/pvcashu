@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}History - PVC{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h3 class="mb-1">PVC Calculation History</h3>
+    <p class="text-muted mb-0">Saved calculations for your account</p>
+  </div>
+  <a href="{{ url_for('main.index') }}" class="btn btn-primary no-print">
+    <i class="bi bi-calculator"></i> New Calculation
+  </a>
+</div>
+
+{% if records %}
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Date</th>
+            <th>Item</th>
+            <th>Basic Rate</th>
+            <th>Qty</th>
+            <th>Final Payable</th>
+            <th>Scenario</th>
+            <th class="no-print">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in records %}
+          <tr>
+            <td>{{ r.id }}</td>
+            <td>{{ r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '-' }}</td>
+            <td>{{ r.item.name if r.item else '-' }}</td>
+            <td>{{ '%.2f'|format(r.basicrate or 0) }}</td>
+            <td>{{ r.quantity or 0 }}</td>
+            <td>{{ '%.2f'|format(r.fairprice or 0) }}</td>
+            <td>
+              <span class="badge bg-info text-dark">{{ r.selectedscenario or '-' }}</span>
+            </td>
+            <td class="no-print">
+              <a href="{{ url_for('pvc.view_calc', calcid=r.id) }}" class="btn btn-sm btn-primary">
+                View
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+  No saved calculations found.
+</div>
+{% endif %}
+{% endblock %}

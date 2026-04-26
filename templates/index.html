@@ -1,0 +1,593 @@
+{% extends "base.html" %}
+{% block title %}PVC Calculator{% endblock %}
+
+{% block content %}
+<div class="alert alert-primary mt-2">
+  <h4 class="mb-1">New PVC Calculation</h4>
+  <div class="small">
+    Fill the commercial and date details below. Lower rate and tender fields are optional and appear only when relevant.
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('pvc.calculate') }}">
+  <!-- Commercial details -->
+  <div class="card mb-3 shadow-sm">
+    <div class="card-header bg-secondary text-white">
+      <h6 class="mb-0">Commercial Details</h6>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <!-- Item -->
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Item</label>
+          <select class="form-select form-select-sm" name="itemid" id="itemid" required>
+            <option value="">-- Select Item --</option>
+            {% for it in items %}
+            <option
+              value="{{ it.id }}"
+              data-formula="{{ it.pvc_formula_code or '' }}"
+              data-extra="{{ it.extra_fields_json or '' }}"
+            >
+              {{ it.name }}
+              {% if it.code %} ({{ it.code }}){% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Tender (for IGBT items) -->
+        <div class="col-md-6" id="tendersection" style="display:none;">
+          <label class="form-label fw-semibold">Select Tender</label>
+          <select class="form-select form-select-sm" name="tenderid" id="tenderid">
+            <option value="">-- Select Tender --</option>
+            {% for t in tenders %}
+            <option
+              value="{{ t.id }}"
+              data-itemid="{{ t.item_id }}"
+              data-basicrate="{{ t.basicrate or '' }}"
+              data-pvcbasedate="{{ t.pvcbasedate or '' }}"
+              data-lowerrate="{{ t.lowerrate or '' }}"
+              data-lowerbasicdate="{{ t.lowerratebasedate or '' }}"
+              data-freightrateperunit="{{ t.freightrateperunit or '' }}"
+              data-lowerfreight="{{ t.lowerfreight or '' }}"
+            >
+              {{ t.tender_no }} – {{ t.item.name if t.item else '' }}
+            </option>
+            {% endfor %}
+          </select>
+          <small class="text-muted">
+            Shown only for items whose PVC formula code is <code>IGBTPROPULSIONSYSTEM</code>.
+          </small>
+        </div>
+
+        <!-- Basic rate / qty / freight -->
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Basic Rate (per unit)</label>
+          <input class="form-control form-control-sm" type="number" step="0.01" name="basicrate" id="basicrate" value = "7600000" required>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Quantity Accepted</label>
+          <input class="form-control form-control-sm" type="number" step="1" name="quantity" value="1"
+         min="1" required>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Freight (per unit)</label>
+          <input class="form-control form-control-sm" type="number" step="0.01" name="freightrateperunit" id="freightrateperunit" value="0">
+        </div>
+
+        <!-- Rate Applied -->
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Rate Applied</label>
+          <select class="form-select form-select-sm" name="rateapplied" id="rateapplied" required>
+            <option value="">-- Select --</option>
+            <option value="supply before due date">
+              Supply Within Original DP or Refixed DP
+            </option>
+            <option value="supply after due date">
+              Supply Beyond Original DP or Refixed DP
+            </option>
+            <option value="lower rate applicable">
+              Lower Rate Applicable Beyond DP Without LD
+            </option>
+            <option value="lower rate and ld comparison">
+              Lower Rate Applicable Beyond DP With LD
+            </option>
+            <option value="lower rate with ld in further extension">
+              Lower Rate Applicable in Further DP Extension With LD
+            </option>
+          </select>
+
+          
+        </div>
+
+      <!-- Lower rate applicable checkbox -->
+      <div class="mt-3 pt-2 border-top">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-4">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="lowerrateapplicablechk" name="lowerrateapplicable" value="1">
+              <label class="form-check-label fw-semibold" for="lowerrateapplicablechk">
+                Lower Rate Applicable
+              </label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="developmentaltender" name="developmentaltender" value="1">
+              <label class="form-check-label fw-semibold" for="developmentaltender">
+                Developmental Tender
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lower rate data entry fields (hidden until checkbox ticked) -->
+      <div id="lowerratesection" class="mt-3 pt-3 border-top" style="display:none;">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Lower Basic Rate (per unit)</label>
+            <input class="form-control form-control-sm" type="number" step="0.01" name="lowerrate" id="lowerrate" value="8150000">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Lower Freight (per unit)</label>
+            <input class="form-control form-control-sm" type="number" step="0.01" name="lowerfreight" id="lowerfreight" Value = "80000">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Lower Base Date</label>
+            <input class="form-control form-control-sm" type="date" name="lowerbasicdate" id="lowerbasicdate" value="2024-05-01">
+          </div>
+        </div>
+      </div>
+  <!-- Item-specific extra fields -->
+  <div class="card mb-3 shadow-sm" id="itemextrasection" style="display:none;">
+    <div class="card-header bg-light">
+      <h6 class="mb-0">Item-Specific Inputs</h6>
+    </div>
+    <div class="card-body" id="itemextracontainer"></div>
+  </div>
+
+  <!-- Date details -->
+  <div class="card mb-3 shadow-sm">
+    <div class="card-header bg-secondary text-white">
+      <h6 class="mb-0">Date Details</h6>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">PVC Base Date</label>
+          <input class="form-control form-control-sm" type="date" name="pvcbasedate" id="pvcbasedate" value="2023-11-01">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Original DP</label>
+          <input class="form-control form-control-sm" type="date" name="origdp" value="2025-01-31">
+        </div>
+
+        <div class="col-md-4 mb-3">
+          <div class="form-check mb-1">
+            <input class="form-check-input" type="checkbox" id="refixeddpchk" onchange="toggleRefixedDP()">
+            <label class="form-check-label" for="refixeddpchk">Refixed DP Applicable</label>
+          </div>
+          <input class="form-control form-control-sm" type="date" name="refixeddp" id="refixeddpinput" disabled>
+        </div>
+
+        <div class="col-md-4 mb-3">
+          <div class="form-check mb-1">
+            <input class="form-check-input" type="checkbox" id="extendeddpchk" onchange="toggleExtendedDP()">
+            <label class="form-check-label" for="extendeddpchk">Extended DP Without LD</label>
+          </div>
+          <input class="form-control form-control-sm" type="date" name="extendeddp" id="extendeddpinput" disabled>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Call / Inspection Date</label>
+          <input class="form-control form-control-sm" type="date" name="caldate" value="2025-01-15">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Supply Date</label>
+          <input class="form-control form-control-sm" type="date" name="supdate" value="2025-01-20">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit -->
+  <div class="text-center mb-4">
+    <button type="submit" class="btn btn-primary px-4">
+      <i class="bi bi-calculator"></i> Calculate PVC
+    </button>
+  </div>
+</form>
+{% endblock %}
+
+{% block extrajs %}
+<script>
+"use strict";
+
+// ═══════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════
+
+const lowerModes = [
+  "lower rate applicable",
+  "lower rate and ld comparison",
+  "lower rate with ld in further extension"
+];
+
+const rateLabels = {
+  "supply before due date"                  : "Supply Within Original DP / Refixed DP",
+  "supply after due date"                   : "Supply Beyond Original DP / Refixed DP",
+  "lower rate applicable"                   : "Lower Rate Applicable – No LD",
+  "lower rate and ld comparison"            : "Lower Rate Applicable – With LD",
+  "lower rate with ld in further extension" : "Lower Rate – Further Extension With LD"
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+// DATE HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+
+function parseDateByName(fieldName) {
+  const el = document.getElementsByName(fieldName)[0];
+  if (!el) return null;
+  const v = (el.value || "").trim();
+  if (!v) return null;
+  const d = new Date(v + "T00:00:00");
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function parseDateById(fieldId) {
+  const el = document.getElementById(fieldId);
+  if (!el) return null;
+  const v = (el.value || "").trim();
+  if (!v) return null;
+  const d = new Date(v + "T00:00:00");
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// Returns latest of Original DP / Refixed DP / Extended DP
+// Only counts Refixed and Extended if their checkboxes are ticked
+function getLatestDPDate() {
+  const orig   = parseDateByName("origdp");
+  const rfxInp = document.getElementById("refixeddpinput");
+  const extInp = document.getElementById("extendeddpinput");
+
+  const refixed  = (rfxInp && !rfxInp.disabled)
+                    ? parseDateByName("refixeddp")  : null;
+  const extended = (extInp && !extInp.disabled)
+                    ? parseDateByName("extendeddp") : null;
+
+  let latest = orig;
+  [refixed, extended].forEach(d => {
+    if (d && (!latest || d > latest)) latest = d;
+  });
+  return latest;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// STATE HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+
+// Returns true if selected item formula is IGBTPROPULSIONSYSTEM
+function isIGBTSelected() {
+  const itemSel = document.getElementById("itemid");
+  if (!itemSel) return false;
+  const opt = itemSel.options[itemSel.selectedIndex];
+  if (!opt || !opt.value) return false;
+  return (opt.getAttribute("data-formula") || "")
+           .trim().toUpperCase() === "IGBTPROPULSIONSYSTEM";
+}
+
+// Returns true if Lower Rate Applicable checkbox is ticked
+function isLowerRateApplicable() {
+  const chk = document.getElementById("lowerrateapplicablechk");
+  return chk ? chk.checked : false;
+}
+
+// Returns true if Developmental Tender checkbox is ticked
+function isDevelopmental() {
+  const chk = document.getElementById("developmentaltender");
+  return chk ? chk.checked : false;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// UI TOGGLE FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════
+
+// Show/hide lower rate fields
+// Visible when: checkbox ticked OR a lower-rate mode already selected
+function toggleLowerRate() {
+  const sec = document.getElementById("lowerratesection");
+  if (!sec) return;
+  const val  = (document.getElementById("rateapplied").value || "")
+                 .trim().toLowerCase();
+  const show = isLowerRateApplicable() || lowerModes.includes(val);
+  sec.style.display = show ? "block" : "none";
+}
+
+// Show/hide tender dropdown
+// Only shown for IGBT items; options filtered by selected item id
+function toggleTenderSection() {
+  const tenderSection = document.getElementById("tendersection");
+  const tenderSel     = document.getElementById("tenderid");
+  if (!tenderSection || !tenderSel) return;
+
+  const selectedItem = document.getElementById("itemid").value;
+  const options      = tenderSel.querySelectorAll("option");
+
+  if (isIGBTSelected()) {
+    tenderSection.style.display = "block";
+    tenderSel.required = true;
+    options.forEach(opt => {
+      if (!opt.value) return;
+      opt.hidden = opt.getAttribute("data-itemid") !== selectedItem;
+    });
+  } else {
+    tenderSection.style.display = "none";
+    tenderSel.required = false;
+    tenderSel.value    = "";
+    options.forEach(opt => { opt.hidden = false; });
+  }
+}
+
+// Enable/disable Refixed DP input
+function toggleRefixedDP() {
+  const chk = document.getElementById("refixeddpchk");
+  const inp = document.getElementById("refixeddpinput");
+  if (!chk || !inp) return;
+  inp.disabled = !chk.checked;
+  if (!chk.checked) inp.value = "";
+  autoDetectRateApplied();
+}
+
+// Enable/disable Extended DP input
+function toggleExtendedDP() {
+  const chk = document.getElementById("extendeddpchk");
+  const inp = document.getElementById("extendeddpinput");
+  if (!chk || !inp) return;
+  inp.disabled = !chk.checked;
+  if (!chk.checked) inp.value = "";
+  autoDetectRateApplied();
+}
+
+// Auto-fill commercial fields from selected tender data attributes
+function fillTenderData() {
+  const tenderSel = document.getElementById("tenderid");
+  if (!tenderSel) return;
+  const opt = tenderSel.options[tenderSel.selectedIndex];
+  if (!opt || !opt.value) return;
+
+  const set = (id, attr) => {
+    const el = document.getElementById(id);
+    if (el) el.value = opt.getAttribute(attr) || "";
+  };
+
+  set("basicrate",          "data-basicrate");
+  set("pvcbasedate",        "data-pvcbasedate");
+  set("lowerrate",          "data-lowerrate");
+  set("lowerbasicdate",     "data-lowerbasicdate");
+  set("freightrateperunit", "data-freightrateperunit");
+  set("lowerfreight",       "data-lowerfreight");
+}
+
+// Render item-specific extra input fields from data-extra JSON
+function renderExtraFields() {
+  const itemSel   = document.getElementById("itemid");
+  const section   = document.getElementById("itemextrasection");
+  const container = document.getElementById("itemextracontainer");
+  if (!itemSel || !section || !container) return;
+
+  container.innerHTML = "";
+
+  const opt = itemSel.options[itemSel.selectedIndex];
+  if (!opt || !opt.value) {
+    section.style.display = "none";
+    return;
+  }
+
+  let fields = [];
+  try {
+    fields = JSON.parse(opt.getAttribute("data-extra") || "[]");
+  } catch (e) {
+    fields = [];
+  }
+
+  if (!Array.isArray(fields) || fields.length === 0) {
+    section.style.display = "none";
+    return;
+  }
+
+  section.style.display = "block";
+
+  fields.forEach(f => {
+    const wrap      = document.createElement("div");
+    wrap.className  = "mb-3";
+
+    const labelText = f.label || f.name || "Field";
+    const name      = f.name  || "extrafield";
+    const type      = f.type  || "text";
+    const stepAttr  = f.step     ? ` step="${f.step}"`  : "";
+    const reqAttr   = f.required ? " required"          : "";
+
+    if (type === "checkbox") {
+      wrap.innerHTML = `
+        <div class="form-check">
+          <input class="form-check-input"
+                 type="checkbox"
+                 name="${name}" id="${name}" value="1">
+          abel class="form-check-label fw-semibold"
+                 for="${name}">${labelText}</label>
+        </div>`;
+
+    } else if (type === "select" && Array.isArray(f.options)) {
+      const optHtml = f.options
+        .map(o => `<option value="${o.value||o}">${o.label||o}</option>`)
+        .join("");
+      wrap.innerHTML = `
+        abel class="form-label fw-semibold"
+               for="${name}">${labelText}</label>
+        <select class="form-select form-select-sm"
+                name="${name}" id="${name}"${reqAttr}>
+          <option value="">-- Select --</option>
+          ${optHtml}
+        </select>`;
+
+    } else {
+      wrap.innerHTML = `
+        abel class="form-label fw-semibold"
+               for="${name}">${labelText}</label>
+        <input class="form-control form-control-sm"
+               type="${type}"
+               name="${name}" id="${name}"
+               ${stepAttr}${reqAttr}>`;
+    }
+
+    container.appendChild(wrap);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// AUTO-DETECT RATE APPLIED
+// ═══════════════════════════════════════════════════════════════════════
+//
+// Decision table:
+//
+//  supply <= latestDP
+//      → "supply before due date"
+//
+//  supply > latestDP   AND   lower rate checkbox OFF
+//      → "supply after due date"
+//
+//  supply > latestDP   AND   lower rate checkbox ON   AND   dev ON
+//      → "lower rate applicable"          (no LD on lower rate)
+//
+//  supply > latestDP   AND   lower rate checkbox ON   AND   dev OFF
+//      → "lower rate and ld comparison"   (LD compared, best scenario)
+//
+//  User can override manually at any time.
+//  Once a lower-rate mode is manually chosen it is preserved
+//  unless dates or checkboxes force a change.
+
+function autoDetectRateApplied() {
+  const rateSel  = document.getElementById("rateapplied");
+  const badge    = document.getElementById("ratedetectbadge");
+  const badgeLbl = document.getElementById("ratedetectlabel");
+  if (!rateSel) return;
+
+  const supply   = parseDateByName("supdate");
+  const latestDP = getLatestDPDate();
+
+  // Not enough info yet – hide badge and leave dropdown alone
+  if (!supply || !latestDP) {
+    if (badge) badge.style.display = "none";
+    return;
+  }
+
+  const dev             = isDevelopmental();
+  const lowerApplicable = isLowerRateApplicable();
+  let   newValue        = rateSel.value;
+
+  if (supply <= latestDP) {
+    // ── Within DP ─────────────────────────────────────────────────────
+    newValue = "supply before due date";
+
+  } else {
+    // ── Beyond DP ─────────────────────────────────────────────────────
+    if (!lowerApplicable) {
+      newValue = "supply after due date";
+
+    } else {
+      if (dev) {
+        // Developmental → lower rate, no LD
+        newValue = "lower rate applicable";
+      } else {
+        // Non-developmental → lower rate with LD
+        // Preserve if user already chose a lower-rate mode
+        const alreadyLower = lowerModes.includes(newValue);
+        if (!newValue || !alreadyLower) {
+          newValue = "lower rate and ld comparison";
+        }
+      }
+    }
+  }
+
+  // Apply to dropdown only if changed
+  if (newValue && newValue !== rateSel.value) {
+    rateSel.value = newValue;
+  }
+
+  // Show auto-detect badge
+  if (badge && badgeLbl && newValue) {
+    badgeLbl.textContent = rateLabels[newValue] || newValue;
+    badge.style.display  = "block";
+  }
+
+  // Sync lower rate section visibility
+  toggleLowerRate();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// DOMContentLoaded – single event binding block
+// ═══════════════════════════════════════════════════════════════════════
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  // Manual rate-applied change → sync lower rate section
+  document.getElementById("rateapplied")
+    .addEventListener("change", toggleLowerRate);
+
+  // Item change → tender section + extra fields
+  document.getElementById("itemid")
+    .addEventListener("change", () => {
+      toggleTenderSection();
+      renderExtraFields();
+    });
+
+  // Tender change → auto-fill commercial fields
+  document.getElementById("tenderid")
+    .addEventListener("change", fillTenderData);
+
+  // Refixed / Extended DP checkboxes
+  document.getElementById("refixeddpchk")
+    .addEventListener("change", toggleRefixedDP);
+  document.getElementById("extendeddpchk")
+    .addEventListener("change", toggleExtendedDP);
+
+  // Date fields → re-run auto-detection on every change
+  ["origdp", "refixeddp", "extendeddp", "supdate"].forEach(name => {
+    const el = document.getElementsByName(name)[0];
+    if (el) el.addEventListener("change", autoDetectRateApplied);
+  });
+
+  // Lower rate data fields → re-run detection when filled / cleared
+  ["lowerrate", "lowerfreight", "lowerbasicdate"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("change", autoDetectRateApplied);
+  });
+
+  // Lower Rate Applicable checkbox → show/hide fields + re-detect
+  const lowerChk = document.getElementById("lowerrateapplicablechk");
+  if (lowerChk) {
+    lowerChk.addEventListener("change", () => {
+      toggleLowerRate();
+      autoDetectRateApplied();
+    });
+  }
+
+  // Developmental Tender checkbox → re-detect mode
+  const devChk = document.getElementById("developmentaltender");
+  if (devChk) {
+    devChk.addEventListener("change", autoDetectRateApplied);
+  }
+
+  // Initialise all UI states on first page load
+  toggleLowerRate();
+  toggleTenderSection();
+  renderExtraFields();
+  toggleRefixedDP();
+  toggleExtendedDP();
+
+});
+</script>
+{% endblock %}        

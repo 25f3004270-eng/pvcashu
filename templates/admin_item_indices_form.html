@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if row else 'Add' }} Indices – {{ item.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-1">{{ 'Edit' if row else 'Add' }} Indices – {{ item.name }}</h3>
+  <a href="{{ url_for('admin.item_indices_list', itemid=item.id) }}" class="btn btn-outline-secondary">
+    Back to Indices
+  </a>
+</div>
+
+<form method="post">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Month (YYYY-MM-DD)</label>
+        <input type="date" name="month" class="form-control" required
+               value="{{ row.month.strftime('%Y-%m-%d') if row else '' }}">
+        <small class="text-muted">
+          Pick any day in the target month (it will be normalized to the 1st for storage).
+        </small>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Indices JSON</label>
+        <textarea name="indicesjson" class="form-control" rows="4">{{ row.indices_json if row else '{}' }}</textarea>
+        <small class="text-muted">
+          Example:
+          <code>{"C":100,"AL":200,"FE":150,"IM":120,"W":110,"D":5,"ER_EUR":90}</code>
+        </small>
+      </div>
+
+      <div class="text-end">
+        <button type="submit" class="btn btn-primary">
+          {{ 'Update' if row else 'Add' }} Indices
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

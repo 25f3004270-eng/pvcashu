@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Item' if item else 'Add Item' }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-1">{{ 'Edit Item' if item else 'Add Item' }}</h3>
+  <a href="{{ url_for('admin.items_list') }}" class="btn btn-outline-secondary">Back to Items</a>
+</div>
+
+<form method="post">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Name</label>
+        <input type="text" name="name" class="form-control" required
+               value="{{ item.name if item else '' }}">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Code</label>
+        <input type="text" name="code" class="form-control"
+               value="{{ item.code if item else '' }}">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">PVC Formula Code</label>
+        <input type="text" name="pvcformulacode" class="form-control" required
+               value="{{ item.pvc_formula_code if item else '' }}">
+        <small class="text-muted">Example: POWERTRFIEEMA, IGBTPROPULSIONSYSTEM.</small>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Weights JSON</label>
+        <textarea name="weightsjson" class="form-control" rows="3">{{ item.weights_json if item else '{}' }}</textarea>
+        <small class="text-muted">Example: {"C":40,"AL":20,"MS":10}</small>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Extra Fields JSON</label>
+        <textarea name="extrafieldsjson" class="form-control" rows="3">{{ item.extra_fields_json if item else '[]' }}</textarea>
+        <small class="text-muted">Array of objects: [{"name":"field1","label":"Field 1","type":"number"}]</small>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Description</label>
+        <textarea name="description" class="form-control" rows="2">{{ item.description if item else '' }}</textarea>
+      </div>
+
+      <div class="text-end">
+        <button type="submit" class="btn btn-primary">
+          {{ 'Update' if item else 'Create' }} Item
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
